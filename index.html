@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>相機掃描範例</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    video { width: 100%; max-width: 400px; border: 1px solid #ccc; }
+    button { margin-top: 10px; padding: 8px 12px; cursor: pointer; }
+    #message { margin-top: 10px; color: green; }
+  </style>
+</head>
+<body>
+  <h2>開啟相機掃描</h2>
+  <video id="camera" autoplay></video>
+  <button onclick="capturePhoto()">拍照送出</button>
+  <div id="message"></div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/你的GAS_ID/exec"; // 改成你的 GAS URL
+    const video = document.getElementById('camera');
+
+    // 開啟相機
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+      } catch (err) {
+        alert('無法存取相機: ' + err);
+      }
+    }
+
+    startCamera();
+
+    // 拍照並送到 GAS
+    async function capturePhoto() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL('image/png'); // 轉成 base64
+      document.getElementById('message').innerText = "送出中...";
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "uploadPhoto", image: dataUrl }),
+        });
+        const result = await res.json();
+        if(result.status === "ok") {
+          document.getElementById('message').innerText = "照片已送出！";
+        } else {
+          document.getElementById('message').innerText = "送出失敗！";
+        }
+      } catch (err) {
+        document.getElementById('message').innerText = "送出錯誤：" + err;
+      }
+    }
+  </script>
+</body>
+</html>
